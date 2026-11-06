@@ -172,86 +172,38 @@
         // Tải lịch sử cũ từ bộ nhớ trình duyệt khi vừa vào trang
         window.addEventListener("DOMContentLoaded", loadHistory);
 
+        // Kích hoạt ô chọn file ẩn khi bấm vào nút Custom hiển thị
         uploadTrigger.addEventListener("click", function(e) {
-            e.preventDefault();
+            e.preventDefault(); // Ngăn chặn nhảy trang do thẻ <a> mặc định
             imageInput.click();
         });
 
-        imageInput.addEventListener("change", function(event) {
-            const file = event.target.files[0]; 
+        // Xử lý khi người dùng chọn một ảnh thành công
+        imageInput.addEventListener("change", function() {
+            const file = this.files[0];
             if (!file) return;
 
-            resultTable.style.display = "none";
             statusDiv.style.display = "block";
-            statusDiv.style.color = "#666";
-            statusDiv.textContent = "⏳ Đang đọc dữ liệu ảnh nhanh...";
+            statusDiv.innerText = "⏳ Đang phân tích dữ liệu ảnh...";
+            resultTable.style.display = "none";
             resultBody.innerHTML = "";
 
-            // Gọi hàm phân tích dữ liệu
             EXIF.getData(file, function() {
                 const tags = EXIF.getAllTags(this);
-                
-                if (!tags || Object.keys(tags).length === 0) {
-                    statusDiv.style.color = "orange";
-                    statusDiv.textContent = "ℹ️ Không tìm thấy dữ liệu EXIF của ảnh này.";
-                    return;
-                }
-
                 statusDiv.style.display = "none";
                 resultTable.style.display = "table";
 
-                // Hiển thị thông tin lên bảng chính
-                for (let tag in tags) {
-                    if (tags.hasOwnProperty(tag) && tag !== "ExifIFDPointer" && tag !== "GPSInfoIFDPointer") {
-                        const row = `<tr>
-                            <td><strong>${tag}</strong></td>
-                            <td>${tags[tag]}</td>
-                        </tr>`;
-                        resultBody.insertAdjacentHTML('beforeend', row);
-                    }
-                }
+                // Danh sách thông số chính cần lọc xuất ra bảng hiển thị trực quan
+                const dataToShow = {
+                    "Tên tệp tin": file.name,
+                    "Kích thước tệp": (file.size / 1024).toFixed(1) + " KB",
+                    "Định dạng": file.type,
+                    "Thiết bị chụp": tags["Thiết bị"] || "Không rõ thiết bị",
+                    "Ngày giờ chụp": tags["Ngày giờ chụp"] || "Không tìm thấy dữ liệu thời gian",
+                    "Chỉ số ISO": tags["Chỉ số ISO"] || "N/A",
+                    "Khẩu độ (F-Number)": tags["Khẩu độ (F-Number)"] ? `f/${tags["Khẩu độ (F-Number)"]}` : "N/A",
+                    "Tốc độ màn trập": tags["Tốc độ màn trập"] ? `1/${Math.round(1 / tags["Tốc độ màn trập"])}s` : "N/A",
+                    "Tiêu cự": tags["Tiêu cự (FocalLength)"] ? tags["Tiêu cự (FocalLength)"] + " mm" : "N/A"
+                };
 
-                // Lưu bản ghi này vào phần Lịch sử ngay trên trang
-                saveToHistory(
-                    file.name, 
-                    tags["Dòng máy/Thiết bị"] || tags["Thiết bị"] || "Không rõ", 
-                    tags["Ngày giờ chụp"] || "Không rõ"
-                );
-            });
-        });
-
-// Hàm lưu dữ liệu vào LocalStorage của trình duyệt
-function saveToHistory(name, device, time) {
-let history = JSON.parse(localStorage.getItem("exif_history")) || [];
-// Thêm bản ghi mới lên đầu danh sách
-history.unshift({ name, device, time });
-// Giới hạn chỉ lưu tối đa 10 ảnh gần nhất để tránh đầy bộ nhớ
-if (history.length > 10) history.pop();
-localStorage.setItem("exif_history", JSON.stringify(history));
-loadHistory();
-}
-// Hàm đọc và hiển thị danh sách lịch sử ra bảng
-function loadHistory() {
-let history = JSON.parse(localStorage.getItem("exif_history")) || [];
-historyBody.innerHTML = "";
-if (history.length === 0) {
-noHistory.style.display = "block";
-historyTable.style.display = "none";
-return;
-}
-noHistory.style.display = "none";
-historyTable.style.display = "table";
-history.forEach(item => {
-const row = `
-${item.name}
-${item.device}
-${item.time}
-`;
-historyBody.insertAdjacentHTML('beforeend', row);
-});
-}
-// Nút xóa sạch lịch sử
-clearHistoryBtn.addEventListener("click", function() {
-localStorage.removeItem("exif_history");
-loadHistory();
-});
+                // Đổ dữ liệu vào bảng kết quả chi tiết vừa chọn
