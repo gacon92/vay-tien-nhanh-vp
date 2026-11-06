@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Công cụ xem thông tin ảnh (EXIF)</title>
+    <!-- Sử dụng thư viện Exif-js -->
+    <script src="https://jsdelivr.net"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f8f9fa;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 80vh;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05), 0 1px 3px rgba(0,0,0,0.1);
+            text-align: center;
+            width: 100%;
+            max-width: 500px;
+            transition: max-width 0.3s ease;
+        }
+        .container.has-data {
+            max-width: 700px;
+        }
+        .upload-link {
+            display: inline-flex;
+            align-items: center;
+            color: #007aff;
+            text-decoration: none;
+            font-size: 16px;
+            font-weight: 500;
+            padding: 10px 20px;
+            border: 1px dashed #007aff;
+            border-radius: 8px;
+            background: #f0f7ff;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .upload-link:hover {
+            background: #007aff;
+            color: #fff;
+        }
+        #imageInput {
+            display: none;
+        }
+        .status {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #666;
+            font-weight: 500;
+        }
+        .result-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 25px;
+            text-align: left;
+            font-size: 14px;
+            animation: fadeIn 0.4s ease;
+        }
+        .result-table th, .result-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #eee;
+        }
+        .result-table th {
+            background-color: #f8f9fa;
+            color: #555;
+            font-weight: 600;
+            width: 35%;
+        }
+        .result-table tr:hover {
+            background-color: #fcfcfc;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container" id="mainContainer">
+        <a href="#" class="upload-link" id="uploadTrigger">📸 Chọn ảnh để xem thông số EXIF</a>
+        <input type="file" id="imageInput" accept="image/*">
+        
+        <div id="status" class="status" style="display: none;"></div>
+
+        <table class="result-table" id="resultTable" style="display: none;">
+            <thead>
+                <tr>
+                    <th>Thông số</th>
+                    <th>Chi tiết</th>
+                </tr>
+            </thead>
+            <tbody id="resultBody"></tbody>
+        </table>
+    </div>
+
+    <script>
+        const uploadTrigger = document.getElementById("uploadTrigger");
+        const imageInput = document.getElementById("imageInput");
+        const mainContainer = document.getElementById("mainContainer");
+        const statusDiv = document.getElementById("status");
+        const resultTable = document.getElementById("resultTable");
+        const resultBody = document.getElementById("resultBody");
+
+        uploadTrigger.addEventListener("click", function(e) {
+            e.preventDefault();
+            imageInput.click();
+        });
+
+        imageInput.addEventListener("change", function(event) {
+            // Sửa lỗi: Lấy chính xác file đầu tiên trong danh sách file được chọn
+            const file = event.target.files[0]; 
+            if (!file) return;
+
+            // Reset trạng thái giao diện
+            resultTable.style.display = "none";
+            statusDiv.style.display = "block";
+            statusDiv.style.color = "#666";
+            statusDiv.textContent = "⏳ Đang phân tích dữ liệu ảnh...";
+            resultBody.innerHTML = "";
+            mainContainer.classList.remove("has-data");
+
+            // Kiểm tra xem thư viện EXIF đã tải thành công chưa
+            if (typeof EXIF === "undefined") {
+                statusDiv.style.color = "red";
+                statusDiv.textContent = "❌ Lỗi kết nối mạng, không thể tải thư viện xử lý ảnh.";
+                return;
+            }
+
+            // Tiến hành đọc dữ liệu EXIF từ file đơn lẻ
+            EXIF.getData(file, function() {
+                const tags = EXIF.getAllTags(this);
+                
+                if (!tags || Object.keys(tags).length === 0) {
+                    statusDiv.style.color = "orange";
+                    statusDiv.textContent = "ℹ️ Không tìm thấy hoặc ảnh đã bị xóa dữ liệu EXIF.";
+                    return;
+                }
+
+                // Ẩn thông báo tải, hiển thị bảng kết quả
+                statusDiv.style.display = "none";
+                mainContainer.classList.add("has-data");
+                resultTable.style.display = "table";
+
+                // Đổ dữ liệu vào bảng một cách an toàn
+                let hasValidContent = false;
+                for (let tag in tags) {
+                    if (tags.hasOwnProperty(tag)) {
+                        const val = tags[tag];
+                        // Bỏ qua các trường dữ liệu nhị phân (Binary) hoặc quá dài làm chậm trình duyệt
+                        if (typeof val !== 'object' && String(val).trim() !== "" && String(val).length < 150) {
+                            hasValidContent = true;
+                            const row = `<tr>
+                                <td><strong>${tag}</strong></td>
+                                <td>${val}</td>
+                            </tr>`;
+                            resultBody.insertAdjacentHTML('beforeend', row);
+                        }
+                    }
+                }
+
+                if (!hasValidContent) {
+                    statusDiv.style.display = "block";
+                    statusDiv.style.color = "orange";
+                    statusDiv.textContent = "ℹ️ Dữ liệu ảnh không chứa thông số đọc được.";
+                    resultTable.style.display = "none";
+                    mainContainer.classList.remove("has-data");
+                }
+            });
+        });
+    </script>
+
+</body>
+</html>
