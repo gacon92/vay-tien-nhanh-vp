@@ -182,3 +182,173 @@
 
 </body>
 </html>
+html
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Công cụ xem thông tin ảnh (EXIF)</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f8f9fa;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 80vh;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05), 0 1px 3px rgba(0,0,0,0.1);
+            text-align: center;
+            width: 100%;
+            max-width: 500px;
+            transition: max-width 0.3s ease;
+        }
+        .container.has-data {
+            max-width: 700px;
+        }
+        .upload-link {
+            display: inline-flex;
+            align-items: center;
+            color: #007aff;
+            text-decoration: none;
+            font-size: 16px;
+            font-weight: 500;
+            padding: 10px 20px;
+            border: 1px dashed #007aff;
+            border-radius: 8px;
+            background: #f0f7ff;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .upload-link:hover {
+            background: #007aff;
+            color: #fff;
+        }
+        #imageInput {
+            display: none;
+        }
+        .status {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #666;
+            font-weight: 500;
+        }
+        .result-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 25px;
+            text-align: left;
+            font-size: 14px;
+            animation: fadeIn 0.4s ease;
+        }
+        .result-table th, .result-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #eee;
+        }
+        .result-table th {
+            background-color: #f8f9fa;
+            color: #555;
+            font-weight: 600;
+            width: 35%;
+        }
+        .result-table tr:hover {
+            background-color: #fcfcfc;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container" id="mainContainer">
+        <a href="#" class="upload-link" id="uploadTrigger">📸 Chọn ảnh để xem thông số EXIF</a>
+        <input type="file" id="imageInput" accept="image/*">
+        
+        <div id="status" class="status" style="display: none;"></div>
+
+        <table class="result-table" id="resultTable" style="display: none;">
+            <thead>
+                <tr>
+                    <th>Thông số</th>
+                    <th>Chi tiết</th>
+                </tr>
+            </thead>
+            <tbody id="resultBody"></tbody>
+        </table>
+    </div>
+
+    <!-- Nhúng trực tiếp thư viện EXIF để trang web load ngay lập tức -->
+    <script>
+Hãy thận trọng khi sử dụng mã.
+(function() { var debug = false; var EXIF = function(obj) { if (obj instanceof EXIF) return obj; if (!(this instanceof EXIF)) return new EXIF(obj); this.exifwrapped = obj; }; if (typeof exports !== 'undefined') { if (typeof module !== 'undefined' && module.exports) { exports = module.exports = EXIF; } exports.EXIF = EXIF; } else { window['EXIF'] = EXIF; } var ExifTags = EXIF.Tags = { 0x0112 : "Orientation", 0x0132 : "DateTime", 0x010F : "Make", 0x0110 : "Model", 0x920A : "FocalLength", 0x829A : "ExposureTime", 0x829D : "FNumber", 0x8827 : "ISOSpeedRatings", 0x9209 : "Flash", 0xbc01 : "HostComputer" }; var GPSTags = EXIF.GPSTags = { 0x0001 : "GPSLatitudeRef", 0x0002 : "GPSLatitude", 0x0003 : "GPSLongitudeRef", 0x0004 : "GPSLongitude", 0x0005 : "GPSAltitudeRef", 0x0006 : "GPSAltitude", 0x0007 : "GPSTimeStamp", 0x001D : "GPSDateStamp" }; function imageHasData(img) { return !!(img.exifdata); } function base64ToArrayBuffer(base64, contentType) { contentType = contentType || base64.match(/^data:([^;]+);base64,/mi)[1] || ''; base64 = base64.replace(/^data:([^;]+);base64,/mi, ''); var binary = atob(base64); var len = binary.length; var buffer = new ArrayBuffer(len); var view = new Uint8Array(buffer); for (var i = 0; i < len; i++) { view[i] = binary.charCodeAt(i); } return buffer; } function objectURLToBlob(url, callback) { var http = new XMLHttpRequest(); http.open("GET", url, true); http.responseType = "blob"; http.onload = function(e) { if (this.status == 200 || this.status === 0) { callback(this.response); } }; http.send(); } function findEXIFinJPEG(file) { var dataView = new DataView(file); if ((dataView.getUint8(0) != 0xFF) || (dataView.getUint8(1) != 0xD8)) { return false; } var offset = 2, length = file.byteLength, marker; while (offset < length) { if (dataView.getUint8(offset) != 0xFF) { return false; } marker = dataView.getUint8(offset + 1); if (marker == 225) { return readEXIFData(dataView, offset + 4, dataView.getUint16(offset + 2) - 2); } else { offset += 2 + dataView.getUint16(offset + 2); } } } function readTags(file, tiffStart, dirStart, strings, bigEnd) { var entries = file.getUint16(dirStart, !bigEnd), tags = {}, entryOffset, tag, i; for (i=0; i<entries; i++) { entryOffset = dirStart + 2 + i12; tag = strings[file.getUint16(entryOffset, !bigEnd)]; if (tag) { tags[tag] = readTagValue(file, entryOffset, tiffStart, dirStart, bigEnd); } } return tags; } function readTagValue(file, entryOffset, tiffStart, dirStart, bigEnd) { var type = file.getUint16(entryOffset+2, !bigEnd), numValues = file.getUint32(entryOffset+4, !bigEnd), valueOffset = file.getUint32(entryOffset+8, !bigEnd) + tiffStart, offset, vals, val, n, numerator, denominator; switch (type) { case 1: case 7: if (numValues == 1) { return file.getUint8(entryOffset + 8, !bigEnd); } else { offset = numValues > 4 ? valueOffset : (entryOffset + 8); vals = []; for (n=0; n<numValues; n++) { vals[n] = file.getUint8(offset + n); } return vals; } case 2: offset = numValues > 4 ? valueOffset : (entryOffset + 8); return getStringFromDB(file, offset, numValues-1); case 3: if (numValues == 1) { return file.getUint16(entryOffset + 8, !bigEnd); } else { offset = numValues > 2 ? valueOffset : (entryOffset + 8); vals = []; for (n=0; n<numValues; n++) { vals[n] = file.getUint16(offset + 2n, !bigEnd); } return vals; } case 4: if (numValues == 1) { return file.getUint32(entryOffset + 8, !bigEnd); } else { vals = []; for (n=0; n<numValues; n++) { vals[n] = file.getUint32(valueOffset + 4n, !bigEnd); } return vals; } case 5: if (numValues == 1) { numerator = file.getUint32(valueOffset, !bigEnd); denominator = file.getUint32(valueOffset+4, !bigEnd); val = new Number(numerator / denominator); val.numerator = numerator; val.denominator = denominator; return val; } else { vals = []; for (n=0; n<numValues; n++) { numerator = file.getUint32(valueOffset + 8n, !bigEnd); denominator = file.getUint32(valueOffset+4 + 8n, !bigEnd); vals[n] = new Number(numerator / denominator); vals[n].numerator = numerator; vals[n].denominator = denominator; } return vals; } case 9: if (numValues == 1) { return file.getInt32(entryOffset + 8, !bigEnd); } else { vals = []; for (n=0; n<numValues; n++) { vals[n] = file.getInt32(valueOffset + 4n, !bigEnd); } return vals; } case 10: if (numValues == 1) { return file.getInt32(valueOffset, !bigEnd) / file.getInt32(valueOffset+4, !bigEnd); } else { vals = []; for (n=0; n<numValues; n++) { vals[n] = file.getInt32(valueOffset + 8n, !bigEnd) / file.getInt32(valueOffset+4 + 8n, !bigEnd); } return vals; } } } function getStringFromDB(buffer, start, length) { var outstr = ""; for (var n = start; n < start+length; n++) { outstr += String.fromCharCode(buffer.getUint8(n)); } return outstr; } function readEXIFData(file, start) { if (getStringFromDB(file, start, 4) != "Exif") { return false; } var bigEnd, tags, gpsTags, tiffOffset = start + 6; if (file.getUint16(tiffOffset) == 0x4949) { bigEnd = false; } else if (file.getUint16(tiffOffset) == 0x4D4D) { bigEnd = true; } else { return false; } if (file.getUint16(tiffOffset+2, !bigEnd) != 0x002A) { return false; } var firstIFDOffset = file.getUint32(tiffOffset+4, !bigEnd); if (firstIFDOffset < 0x00000008) { return false; } tags = readTags(file, tiffOffset, tiffOffset + firstIFDOffset, ExifTags, bigEnd); if (tags.ExifIFDPointer) { var exifData = readTags(file, tiffOffset, tiffOffset + tags.ExifIFDPointer, ExifTags, bigEnd); for (var tag in exifData) { tags[tag] = exifData[tag]; } } if (tags.GPSInfoIFDPointer) { gpsTags = readTags(file, tiffOffset, tiffOffset + tags.GPSInfoIFDPointer, GPSTags, bigEnd); for (var tag in gpsTags) { tags[tag] = gpsTags[tag]; } } return tags; } EXIF.getData = function(img, callback) { if (((self.Image && img instanceof HTMLImageElement) || (self.File && img instanceof File)) && !img.exifdata) { img.exifdata = {}; } if ((self.Image && img instanceof HTMLImageElement) && img.src) { if (/^data:/i.test(img.src)) { var arrayBuffer = base64ToArrayBuffer(img.src); img.exifdata = findEXIFinJPEG(arrayBuffer) || {}; if (callback) { callback.call(img); } } else if (/^blob:/i.test(img.src)) { var fileReader = new FileReader(); fileReader.onload = function(e) { img.exifdata = findEXIFinJPEG(e.target.result) || {}; if (callback) { callback.call(img); } }; objectURLToBlob(img.src, function(blob) { fileReader.readAsArrayBuffer(blob); }); } else { var http = new XMLHttpRequest(); http.open("GET", img.src, true); http.responseType = "arraybuffer"; http.onload = function(e) { if (this.status == 200 || this.status === 0) { img.exifdata = findEXIFinJPEG(this.response) || {}; if (callback) { callback.call(img); } } }; http.send(); } } else if (self.File && img instanceof File) { var fileReader = new FileReader(); fileReader.onload = function(e) { img.exifdata = findEXIFinJPEG(e.target.result) || {}; if (callback) { callback.call(img); } }; fileReader.readAsArrayBuffer(img); } else { if (callback) callback.call(img); } return true; }; EXIF.getTag = function(img, tag) { if (!imageHasData(img)) return; return img.exifdata[tag]; }; EXIF.getAllTags = function(img) { if (!imageHasData(img)) return {}; return img.exifdata; }; })();
+const uploadTrigger = document.getElementById("uploadTrigger");
+const imageInput = document.getElementById("imageInput");
+const mainContainer = document.getElementById("mainContainer");
+const statusDiv = document.getElementById("status");
+const resultTable = document.getElementById("resultTable");
+const resultBody = document.getElementById("resultBody");
+uploadTrigger.addEventListener("click", function(e) {
+e.preventDefault();
+imageInput.click();
+});
+imageInput.addEventListener("change", function(event) {
+const files = event.target.files;
+if (!files || files.length === 0) return;
+const file = files[0];
+resultTable.style.display = "none";
+statusDiv.style.display = "block";
+statusDiv.style.color = "#666";
+statusDiv.textContent = "⏳ Đang phân tích dữ liệu ảnh...";
+resultBody.innerHTML = "";
+mainContainer.classList.remove("has-data");
+EXIF.getData(file, function() {
+const tags = EXIF.getAllTags(this);
+if (!tags || Object.keys(tags).length === 0) {
+statusDiv.style.color = "orange";
+statusDiv.textContent = "ℹ️ Không tìm thấy dữ liệu EXIF (Ảnh có thể đã bị xóa metadata).";
+return;
+}
+statusDiv.style.display = "none";
+mainContainer.classList.add("has-data");
+resultTable.style.display = "table";
+let hasValidContent = false;
+for (let tag in tags) {
+if (tags.hasOwnProperty(tag)) {
+const val = tags[tag];
+if (typeof val !== 'object' && String(val).trim() !== "" && String(val).length < 150) {
+hasValidContent = true;
+const row = `
+${tag}
+${val}
+`;
+resultBody.insertAdjacentHTML('beforeend', row);
+}
+}
+}
+if (!hasValidContent) {
+statusDiv.style.display = "block";
+statusDiv.style.color = "orange";
+statusDiv.textContent = "ℹ️ Không tìm thấy thông số EXIF phổ biến.";
+resultTable.style.display = "none";
+mainContainer.classList.remove("has-data");
+}
+});
+});
+
+### 💡 Lưu ý quan trọng sau khi cập nhật:
+* Sau khi dán code mới lên GitHub, bạn hãy đợi khoảng **30 giây** để hệ thống đồng bộ.
+* Khi mở lại trang web, hãy nhấn **`Ctrl + F5`** (trên máy tính) hoặc mở bằng **tab ẩn danh** (trên điện thoại) để trình duyệt không tải lại file cũ bị lag nữa nhé.
+
+<FollowUp>
+Bạn hãy thử cập nhật bản code tự lập này xem trang **đã mở lên ngay lập tức chưa** và báo lại kết quả cho tôi biết nhé!
+</FollowUp>
