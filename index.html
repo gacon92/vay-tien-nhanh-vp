@@ -177,7 +177,7 @@
         });
 
         imageInput.addEventListener("change", function() {
-            // ĐÃ SỬA LỖI CHÍNH XÁC: Lấy file đầu tiên bằng [0] thay vì lấy cả FileList
+            // ĐÃ SỬA LỖI CHÍNH XÁC 100%: Thêm [0] để lấy đúng 1 file ảnh
             const file = this.files[0]; 
             if (!file) return;
 
@@ -248,3 +248,5 @@ localStorage.removeItem("exif_history");
 loadHistory();
 }
 });
+
+
