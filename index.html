@@ -3,50 +3,57 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Công cụ xem thông tin ảnh (EXIF)</title>
-    <!-- Sử dụng thư viện Exif-js -->
-    <script src="https://jsdelivr.net"></script>
+    <title>Công cụ phân tích dữ liệu ảnh chuyên nghiệp</title>
     <style>
+        :root {
+            --primary-color: #007aff;
+            --bg-color: #f5f7fa;
+            --card-bg: #ffffff;
+            --text-main: #333333;
+            --text-sub: #666666;
+            --border-color: #e5e5e7;
+        }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: #f8f9fa;
-            color: #333;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 80vh;
+            background-color: var(--bg-color);
+            color: var(--text-main);
             margin: 0;
             padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
         }
         .container {
-            background: #ffffff;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05), 0 1px 3px rgba(0,0,0,0.1);
+            background: var(--card-bg);
+            padding: 25px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
             text-align: center;
             width: 100%;
-            max-width: 500px;
-            transition: max-width 0.3s ease;
-        }
-        .container.has-data {
-            max-width: 700px;
+            max-width: 600px;
+            box-sizing: border-box;
+            margin-bottom: 20px;
         }
         .upload-link {
             display: inline-flex;
             align-items: center;
-            color: #007aff;
+            justify-content: center;
+            color: var(--primary-color);
             text-decoration: none;
             font-size: 16px;
-            font-weight: 500;
-            padding: 10px 20px;
-            border: 1px dashed #007aff;
-            border-radius: 8px;
+            font-weight: 600;
+            padding: 14px 24px;
+            border: 2px dashed var(--primary-color);
+            border-radius: 12px;
             background: #f0f7ff;
             cursor: pointer;
             transition: all 0.2s ease;
+            width: 100%;
+            box-sizing: border-box;
         }
-        .upload-link:hover {
-            background: #007aff;
+        .upload-link:hover, .upload-link:active {
+            background: var(--primary-color);
             color: #fff;
         }
         #imageInput {
@@ -55,40 +62,63 @@
         .status {
             margin-top: 15px;
             font-size: 14px;
-            color: #666;
+            color: var(--text-sub);
             font-weight: 500;
         }
-        .result-table {
+        .result-table, .history-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 25px;
+            margin-top: 20px;
             text-align: left;
             font-size: 14px;
-            animation: fadeIn 0.4s ease;
         }
-        .result-table th, .result-table td {
-            padding: 12px 15px;
-            border-bottom: 1px solid #eee;
+        .result-table th, .result-table td, .history-table th, .history-table td {
+            padding: 12px;
+            border-bottom: 1px solid var(--border-color);
+            word-break: break-word;
         }
-        .result-table th {
+        .result-table th, .history-table th {
             background-color: #f8f9fa;
-            color: #555;
+            color: #444;
             font-weight: 600;
-            width: 35%;
         }
-        .result-table tr:hover {
-            background-color: #fcfcfc;
+        .history-section {
+            background: var(--card-bg);
+            padding: 25px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            width: 100%;
+            max-width: 600px;
+            box-sizing: border-box;
         }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+        .history-title {
+            margin-top: 0;
+            font-size: 16px;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .btn-clear {
+            font-size: 12px;
+            color: #ff3b30;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-weight: 500;
+        }
+        .no-history {
+            font-size: 13px;
+            color: var(--text-sub);
+            text-align: center;
+            padding: 10px 0;
         }
     </style>
 </head>
 <body>
 
-    <div class="container" id="mainContainer">
-        <a href="#" class="upload-link" id="uploadTrigger">📸 Chọn ảnh để xem thông số EXIF</a>
+    <div class="container">
+        <a href="#" class="upload-link" id="uploadTrigger">📸 Chọn ảnh từ thiết bị để xem EXIF</a>
         <input type="file" id="imageInput" accept="image/*">
         
         <div id="status" class="status" style="display: none;"></div>
@@ -96,21 +126,51 @@
         <table class="result-table" id="resultTable" style="display: none;">
             <thead>
                 <tr>
-                    <th>Thông số</th>
-                    <th>Chi tiết</th>
+                    <th style="width: 45%;">Thông số chi tiết ảnh vừa chọn</th>
+                    <th>Giá trị</th>
                 </tr>
             </thead>
             <tbody id="resultBody"></tbody>
         </table>
     </div>
 
+    <div class="history-section">
+        <div class="history-title">
+            <span>📜 Lịch sử ảnh đã quét (Lưu trên trang)</span>
+            <button class="btn-clear" id="clearHistory">Xóa tất cả</button>
+        </div>
+        <div id="noHistory" class="no-history">Chưa có lịch sử lưu trữ.</div>
+        <table class="history-table" id="historyTable" style="display: none;">
+            <thead>
+                <tr>
+                    <th>Tên file</th>
+                    <th>Thiết bị chụp</th>
+                    <th>Thời gian chụp</th>
+                </tr>
+            </thead>
+            <tbody id="historyBody"></tbody>
+        </table>
+    </div>
+
+    <!-- Nhúng trực tiếp lõi xử lý EXIF tối giản, siêu tốc -->
+    <script>
+        (function(){var e=function(t){if(t instanceof e)return t;if(!(this instanceof e))return new e(t);this.exifwrapped=t};window.EXIF=e;var t={0x0112:"Orientation",0x0132:"Ngày giờ chụp",0x010f:"Hãng máy",0x0110:"Dòng máy/Thiết bị",0x920a:"Tiêu cự (FocalLength)",0x829a:"Tốc độ màn trập",0x829d:"Khẩu độ (F-Number)",0x8827:"Chỉ số ISO",0x9209:"Đèn Flash"};var r={0x0001:"Vĩ độ Bắc/Nam",0x0002:"Tọa độ Vĩ độ (Latitude)",0x0003:"Kinh độ Đông/Tây",0x0004:"Tọa độ Kinh độ (Longitude)",0x0005:"Độ cao tham chiếu",0x0006:"Độ cao thực tế"};e.getData=function(n,i){if(!(n instanceof File))return i&&i.call(n);var a=new FileReader;a.onload=function(a){var o=a.target.result,s=new DataView(o);if(s.byteLength<2||255!=s.getUint8(0)||216!=s.getUint8(1))return n.exifdata={},i&&i.call(n);var u=2,l=o.byteLength;while(u<l){if(255!=s.getUint8(u))break;var f=s.getUint8(u+1);if(225==f){var c=u+4,d=s.getUint16(u+2)-2,g=c+6;if("Exif"==String.fromCharCode(s.getUint8(c),s.getUint8(c+1),s.getUint8(c+2),s.getUint8(c+3))){var h,v,m=s.getUint16(g);if(18761==m)h=!1;else if(19789==m)h=!0;else break;if(42!=s.getUint16(g+2,!h))break;var p=s.getUint32(g+4,!h);if(p<8)break;v=y(s,g,g+p,t,h);if(v["Dòng máy/Thiết bị"])v["Thiết bị"]=v["Dòng máy/Thiết bị"];else if(v["Hãng máy"])v["Thiết bị"]=v["Hãng máy"];if(v.ExifIFDPointer){var I=y(s,g,g+v.ExifIFDPointer,t,h);for(var w in I)v[w]=I[w]}if(v.GPSInfoIFDPointer){var T=y(s,g,g+v.GPSInfoIFDPointer,r,h);for(var w in T)v[w]=T[w]}n.exifdata=v;return i&&i.call(n)}}u+=2+s.getUint16(u+2)}n.exifdata={};i&&i.call(n)};a.readAsArrayBuffer(n.slice(0,131072))};function y(e,t,r,n,i){var a=e.getUint16(r,!i),o={},s,u,l;for(l=0;l<a;l++){s=r+2+12*l;u=n[e.getUint16(s,!i)];if(u)o[u]=F(e,s,t,i)}return o}function F(e,t,r,n){var i=e.getUint16(t+2,!n),a=e.getUint32(t+4,!n),o=e.getUint32(t+8,!n)+r,s,u,l;switch(i){case 2:s=a>4?o:t+8;var f="";for(u=0;u<a-1;u++)f+=String.fromCharCode(e.getUint8(s+u));return f.trim();case 3:if(1==a)return e.getUint16(t+8,!n);s=a>2?o:t+8;var c=[];for(u=0;u<a;u++)c[u]=e.getUint16(s+2*u,!n);return c;case 4:if(1==a)return e.getUint32(t+8,!n);var c=[];for(u=0;u<a;u++)c[u]=e.getUint32(o+4*u,!n);return c;case 5:if(1==a)return(e.getUint32(o,!n)/e.getUint32(o+4,!n)).toFixed(2);var c=[];for(u=0;u<a;u++)c[u]=(e.getUint32(o+8*u,!n)/e.getUint32(o+4+8*u,!n)).toFixed(2);return c;default:return""}}e.getAllTags=function(e){return e.exifdata||{}}})();
+    </script>
+
+    <!-- Kịch bản điều khiển giao diện và bộ nhớ trang web -->
     <script>
         const uploadTrigger = document.getElementById("uploadTrigger");
         const imageInput = document.getElementById("imageInput");
-        const mainContainer = document.getElementById("mainContainer");
         const statusDiv = document.getElementById("status");
         const resultTable = document.getElementById("resultTable");
         const resultBody = document.getElementById("resultBody");
+        const historyTable = document.getElementById("historyTable");
+        const historyBody = document.getElementById("historyBody");
+        const noHistory = document.getElementById("noHistory");
+        const clearHistoryBtn = document.getElementById("clearHistory");
+
+        // Tải lịch sử cũ từ bộ nhớ trình duyệt khi vừa vào trang
+        window.addEventListener("DOMContentLoaded", loadHistory);
 
         uploadTrigger.addEventListener("click", function(e) {
             e.preventDefault();
@@ -118,237 +178,80 @@
         });
 
         imageInput.addEventListener("change", function(event) {
-            // Sửa lỗi: Lấy chính xác file đầu tiên trong danh sách file được chọn
             const file = event.target.files[0]; 
             if (!file) return;
 
-            // Reset trạng thái giao diện
             resultTable.style.display = "none";
             statusDiv.style.display = "block";
             statusDiv.style.color = "#666";
-            statusDiv.textContent = "⏳ Đang phân tích dữ liệu ảnh...";
+            statusDiv.textContent = "⏳ Đang đọc dữ liệu ảnh nhanh...";
             resultBody.innerHTML = "";
-            mainContainer.classList.remove("has-data");
 
-            // Kiểm tra xem thư viện EXIF đã tải thành công chưa
-            if (typeof EXIF === "undefined") {
-                statusDiv.style.color = "red";
-                statusDiv.textContent = "❌ Lỗi kết nối mạng, không thể tải thư viện xử lý ảnh.";
-                return;
-            }
-
-            // Tiến hành đọc dữ liệu EXIF từ file đơn lẻ
+            // Gọi hàm phân tích dữ liệu
             EXIF.getData(file, function() {
                 const tags = EXIF.getAllTags(this);
                 
                 if (!tags || Object.keys(tags).length === 0) {
                     statusDiv.style.color = "orange";
-                    statusDiv.textContent = "ℹ️ Không tìm thấy hoặc ảnh đã bị xóa dữ liệu EXIF.";
+                    statusDiv.textContent = "ℹ️ Không tìm thấy dữ liệu EXIF của ảnh này.";
                     return;
                 }
 
-                // Ẩn thông báo tải, hiển thị bảng kết quả
                 statusDiv.style.display = "none";
-                mainContainer.classList.add("has-data");
                 resultTable.style.display = "table";
 
-                // Đổ dữ liệu vào bảng một cách an toàn
-                let hasValidContent = false;
+                // Hiển thị thông tin lên bảng chính
                 for (let tag in tags) {
-                    if (tags.hasOwnProperty(tag)) {
-                        const val = tags[tag];
-                        // Bỏ qua các trường dữ liệu nhị phân (Binary) hoặc quá dài làm chậm trình duyệt
-                        if (typeof val !== 'object' && String(val).trim() !== "" && String(val).length < 150) {
-                            hasValidContent = true;
-                            const row = `<tr>
-                                <td><strong>${tag}</strong></td>
-                                <td>${val}</td>
-                            </tr>`;
-                            resultBody.insertAdjacentHTML('beforeend', row);
-                        }
+                    if (tags.hasOwnProperty(tag) && tag !== "ExifIFDPointer" && tag !== "GPSInfoIFDPointer") {
+                        const row = `<tr>
+                            <td><strong>${tag}</strong></td>
+                            <td>${tags[tag]}</td>
+                        </tr>`;
+                        resultBody.insertAdjacentHTML('beforeend', row);
                     }
                 }
 
-                if (!hasValidContent) {
-                    statusDiv.style.display = "block";
-                    statusDiv.style.color = "orange";
-                    statusDiv.textContent = "ℹ️ Dữ liệu ảnh không chứa thông số đọc được.";
-                    resultTable.style.display = "none";
-                    mainContainer.classList.remove("has-data");
-                }
+                // Lưu bản ghi này vào phần Lịch sử ngay trên trang
+                saveToHistory(
+                    file.name, 
+                    tags["Dòng máy/Thiết bị"] || tags["Thiết bị"] || "Không rõ", 
+                    tags["Ngày giờ chụp"] || "Không rõ"
+                );
             });
         });
-    </script>
 
-</body>
-</html>
-html
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Công cụ xem thông tin ảnh (EXIF)</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: #f8f9fa;
-            color: #333;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 80vh;
-            margin: 0;
-            padding: 20px;
-        }
-        .container {
-            background: #ffffff;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05), 0 1px 3px rgba(0,0,0,0.1);
-            text-align: center;
-            width: 100%;
-            max-width: 500px;
-            transition: max-width 0.3s ease;
-        }
-        .container.has-data {
-            max-width: 700px;
-        }
-        .upload-link {
-            display: inline-flex;
-            align-items: center;
-            color: #007aff;
-            text-decoration: none;
-            font-size: 16px;
-            font-weight: 500;
-            padding: 10px 20px;
-            border: 1px dashed #007aff;
-            border-radius: 8px;
-            background: #f0f7ff;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        .upload-link:hover {
-            background: #007aff;
-            color: #fff;
-        }
-        #imageInput {
-            display: none;
-        }
-        .status {
-            margin-top: 15px;
-            font-size: 14px;
-            color: #666;
-            font-weight: 500;
-        }
-        .result-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 25px;
-            text-align: left;
-            font-size: 14px;
-            animation: fadeIn 0.4s ease;
-        }
-        .result-table th, .result-table td {
-            padding: 12px 15px;
-            border-bottom: 1px solid #eee;
-        }
-        .result-table th {
-            background-color: #f8f9fa;
-            color: #555;
-            font-weight: 600;
-            width: 35%;
-        }
-        .result-table tr:hover {
-            background-color: #fcfcfc;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-    </style>
-</head>
-<body>
-
-    <div class="container" id="mainContainer">
-        <a href="#" class="upload-link" id="uploadTrigger">📸 Chọn ảnh để xem thông số EXIF</a>
-        <input type="file" id="imageInput" accept="image/*">
-        
-        <div id="status" class="status" style="display: none;"></div>
-
-        <table class="result-table" id="resultTable" style="display: none;">
-            <thead>
-                <tr>
-                    <th>Thông số</th>
-                    <th>Chi tiết</th>
-                </tr>
-            </thead>
-            <tbody id="resultBody"></tbody>
-        </table>
-    </div>
-
-    <!-- Nhúng trực tiếp thư viện EXIF để trang web load ngay lập tức -->
-    <script>
-Hãy thận trọng khi sử dụng mã.
-(function() { var debug = false; var EXIF = function(obj) { if (obj instanceof EXIF) return obj; if (!(this instanceof EXIF)) return new EXIF(obj); this.exifwrapped = obj; }; if (typeof exports !== 'undefined') { if (typeof module !== 'undefined' && module.exports) { exports = module.exports = EXIF; } exports.EXIF = EXIF; } else { window['EXIF'] = EXIF; } var ExifTags = EXIF.Tags = { 0x0112 : "Orientation", 0x0132 : "DateTime", 0x010F : "Make", 0x0110 : "Model", 0x920A : "FocalLength", 0x829A : "ExposureTime", 0x829D : "FNumber", 0x8827 : "ISOSpeedRatings", 0x9209 : "Flash", 0xbc01 : "HostComputer" }; var GPSTags = EXIF.GPSTags = { 0x0001 : "GPSLatitudeRef", 0x0002 : "GPSLatitude", 0x0003 : "GPSLongitudeRef", 0x0004 : "GPSLongitude", 0x0005 : "GPSAltitudeRef", 0x0006 : "GPSAltitude", 0x0007 : "GPSTimeStamp", 0x001D : "GPSDateStamp" }; function imageHasData(img) { return !!(img.exifdata); } function base64ToArrayBuffer(base64, contentType) { contentType = contentType || base64.match(/^data:([^;]+);base64,/mi)[1] || ''; base64 = base64.replace(/^data:([^;]+);base64,/mi, ''); var binary = atob(base64); var len = binary.length; var buffer = new ArrayBuffer(len); var view = new Uint8Array(buffer); for (var i = 0; i < len; i++) { view[i] = binary.charCodeAt(i); } return buffer; } function objectURLToBlob(url, callback) { var http = new XMLHttpRequest(); http.open("GET", url, true); http.responseType = "blob"; http.onload = function(e) { if (this.status == 200 || this.status === 0) { callback(this.response); } }; http.send(); } function findEXIFinJPEG(file) { var dataView = new DataView(file); if ((dataView.getUint8(0) != 0xFF) || (dataView.getUint8(1) != 0xD8)) { return false; } var offset = 2, length = file.byteLength, marker; while (offset < length) { if (dataView.getUint8(offset) != 0xFF) { return false; } marker = dataView.getUint8(offset + 1); if (marker == 225) { return readEXIFData(dataView, offset + 4, dataView.getUint16(offset + 2) - 2); } else { offset += 2 + dataView.getUint16(offset + 2); } } } function readTags(file, tiffStart, dirStart, strings, bigEnd) { var entries = file.getUint16(dirStart, !bigEnd), tags = {}, entryOffset, tag, i; for (i=0; i<entries; i++) { entryOffset = dirStart + 2 + i12; tag = strings[file.getUint16(entryOffset, !bigEnd)]; if (tag) { tags[tag] = readTagValue(file, entryOffset, tiffStart, dirStart, bigEnd); } } return tags; } function readTagValue(file, entryOffset, tiffStart, dirStart, bigEnd) { var type = file.getUint16(entryOffset+2, !bigEnd), numValues = file.getUint32(entryOffset+4, !bigEnd), valueOffset = file.getUint32(entryOffset+8, !bigEnd) + tiffStart, offset, vals, val, n, numerator, denominator; switch (type) { case 1: case 7: if (numValues == 1) { return file.getUint8(entryOffset + 8, !bigEnd); } else { offset = numValues > 4 ? valueOffset : (entryOffset + 8); vals = []; for (n=0; n<numValues; n++) { vals[n] = file.getUint8(offset + n); } return vals; } case 2: offset = numValues > 4 ? valueOffset : (entryOffset + 8); return getStringFromDB(file, offset, numValues-1); case 3: if (numValues == 1) { return file.getUint16(entryOffset + 8, !bigEnd); } else { offset = numValues > 2 ? valueOffset : (entryOffset + 8); vals = []; for (n=0; n<numValues; n++) { vals[n] = file.getUint16(offset + 2n, !bigEnd); } return vals; } case 4: if (numValues == 1) { return file.getUint32(entryOffset + 8, !bigEnd); } else { vals = []; for (n=0; n<numValues; n++) { vals[n] = file.getUint32(valueOffset + 4n, !bigEnd); } return vals; } case 5: if (numValues == 1) { numerator = file.getUint32(valueOffset, !bigEnd); denominator = file.getUint32(valueOffset+4, !bigEnd); val = new Number(numerator / denominator); val.numerator = numerator; val.denominator = denominator; return val; } else { vals = []; for (n=0; n<numValues; n++) { numerator = file.getUint32(valueOffset + 8n, !bigEnd); denominator = file.getUint32(valueOffset+4 + 8n, !bigEnd); vals[n] = new Number(numerator / denominator); vals[n].numerator = numerator; vals[n].denominator = denominator; } return vals; } case 9: if (numValues == 1) { return file.getInt32(entryOffset + 8, !bigEnd); } else { vals = []; for (n=0; n<numValues; n++) { vals[n] = file.getInt32(valueOffset + 4n, !bigEnd); } return vals; } case 10: if (numValues == 1) { return file.getInt32(valueOffset, !bigEnd) / file.getInt32(valueOffset+4, !bigEnd); } else { vals = []; for (n=0; n<numValues; n++) { vals[n] = file.getInt32(valueOffset + 8n, !bigEnd) / file.getInt32(valueOffset+4 + 8n, !bigEnd); } return vals; } } } function getStringFromDB(buffer, start, length) { var outstr = ""; for (var n = start; n < start+length; n++) { outstr += String.fromCharCode(buffer.getUint8(n)); } return outstr; } function readEXIFData(file, start) { if (getStringFromDB(file, start, 4) != "Exif") { return false; } var bigEnd, tags, gpsTags, tiffOffset = start + 6; if (file.getUint16(tiffOffset) == 0x4949) { bigEnd = false; } else if (file.getUint16(tiffOffset) == 0x4D4D) { bigEnd = true; } else { return false; } if (file.getUint16(tiffOffset+2, !bigEnd) != 0x002A) { return false; } var firstIFDOffset = file.getUint32(tiffOffset+4, !bigEnd); if (firstIFDOffset < 0x00000008) { return false; } tags = readTags(file, tiffOffset, tiffOffset + firstIFDOffset, ExifTags, bigEnd); if (tags.ExifIFDPointer) { var exifData = readTags(file, tiffOffset, tiffOffset + tags.ExifIFDPointer, ExifTags, bigEnd); for (var tag in exifData) { tags[tag] = exifData[tag]; } } if (tags.GPSInfoIFDPointer) { gpsTags = readTags(file, tiffOffset, tiffOffset + tags.GPSInfoIFDPointer, GPSTags, bigEnd); for (var tag in gpsTags) { tags[tag] = gpsTags[tag]; } } return tags; } EXIF.getData = function(img, callback) { if (((self.Image && img instanceof HTMLImageElement) || (self.File && img instanceof File)) && !img.exifdata) { img.exifdata = {}; } if ((self.Image && img instanceof HTMLImageElement) && img.src) { if (/^data:/i.test(img.src)) { var arrayBuffer = base64ToArrayBuffer(img.src); img.exifdata = findEXIFinJPEG(arrayBuffer) || {}; if (callback) { callback.call(img); } } else if (/^blob:/i.test(img.src)) { var fileReader = new FileReader(); fileReader.onload = function(e) { img.exifdata = findEXIFinJPEG(e.target.result) || {}; if (callback) { callback.call(img); } }; objectURLToBlob(img.src, function(blob) { fileReader.readAsArrayBuffer(blob); }); } else { var http = new XMLHttpRequest(); http.open("GET", img.src, true); http.responseType = "arraybuffer"; http.onload = function(e) { if (this.status == 200 || this.status === 0) { img.exifdata = findEXIFinJPEG(this.response) || {}; if (callback) { callback.call(img); } } }; http.send(); } } else if (self.File && img instanceof File) { var fileReader = new FileReader(); fileReader.onload = function(e) { img.exifdata = findEXIFinJPEG(e.target.result) || {}; if (callback) { callback.call(img); } }; fileReader.readAsArrayBuffer(img); } else { if (callback) callback.call(img); } return true; }; EXIF.getTag = function(img, tag) { if (!imageHasData(img)) return; return img.exifdata[tag]; }; EXIF.getAllTags = function(img) { if (!imageHasData(img)) return {}; return img.exifdata; }; })();
-const uploadTrigger = document.getElementById("uploadTrigger");
-const imageInput = document.getElementById("imageInput");
-const mainContainer = document.getElementById("mainContainer");
-const statusDiv = document.getElementById("status");
-const resultTable = document.getElementById("resultTable");
-const resultBody = document.getElementById("resultBody");
-uploadTrigger.addEventListener("click", function(e) {
-e.preventDefault();
-imageInput.click();
-});
-imageInput.addEventListener("change", function(event) {
-const files = event.target.files;
-if (!files || files.length === 0) return;
-const file = files[0];
-resultTable.style.display = "none";
-statusDiv.style.display = "block";
-statusDiv.style.color = "#666";
-statusDiv.textContent = "⏳ Đang phân tích dữ liệu ảnh...";
-resultBody.innerHTML = "";
-mainContainer.classList.remove("has-data");
-EXIF.getData(file, function() {
-const tags = EXIF.getAllTags(this);
-if (!tags || Object.keys(tags).length === 0) {
-statusDiv.style.color = "orange";
-statusDiv.textContent = "ℹ️ Không tìm thấy dữ liệu EXIF (Ảnh có thể đã bị xóa metadata).";
+// Hàm lưu dữ liệu vào LocalStorage của trình duyệt
+function saveToHistory(name, device, time) {
+let history = JSON.parse(localStorage.getItem("exif_history")) || [];
+// Thêm bản ghi mới lên đầu danh sách
+history.unshift({ name, device, time });
+// Giới hạn chỉ lưu tối đa 10 ảnh gần nhất để tránh đầy bộ nhớ
+if (history.length > 10) history.pop();
+localStorage.setItem("exif_history", JSON.stringify(history));
+loadHistory();
+}
+// Hàm đọc và hiển thị danh sách lịch sử ra bảng
+function loadHistory() {
+let history = JSON.parse(localStorage.getItem("exif_history")) || [];
+historyBody.innerHTML = "";
+if (history.length === 0) {
+noHistory.style.display = "block";
+historyTable.style.display = "none";
 return;
 }
-statusDiv.style.display = "none";
-mainContainer.classList.add("has-data");
-resultTable.style.display = "table";
-let hasValidContent = false;
-for (let tag in tags) {
-if (tags.hasOwnProperty(tag)) {
-const val = tags[tag];
-if (typeof val !== 'object' && String(val).trim() !== "" && String(val).length < 150) {
-hasValidContent = true;
+noHistory.style.display = "none";
+historyTable.style.display = "table";
+history.forEach(item => {
 const row = `
-${tag}
-${val}
+${item.name}
+${item.device}
+${item.time}
 `;
-resultBody.insertAdjacentHTML('beforeend', row);
-}
-}
-}
-if (!hasValidContent) {
-statusDiv.style.display = "block";
-statusDiv.style.color = "orange";
-statusDiv.textContent = "ℹ️ Không tìm thấy thông số EXIF phổ biến.";
-resultTable.style.display = "none";
-mainContainer.classList.remove("has-data");
-}
+historyBody.insertAdjacentHTML('beforeend', row);
 });
+}
+// Nút xóa sạch lịch sử
+clearHistoryBtn.addEventListener("click", function() {
+localStorage.removeItem("exif_history");
+loadHistory();
 });
-
-### 💡 Lưu ý quan trọng sau khi cập nhật:
-* Sau khi dán code mới lên GitHub, bạn hãy đợi khoảng **30 giây** để hệ thống đồng bộ.
-* Khi mở lại trang web, hãy nhấn **`Ctrl + F5`** (trên máy tính) hoặc mở bằng **tab ẩn danh** (trên điện thoại) để trình duyệt không tải lại file cũ bị lag nữa nhé.
-
-<FollowUp>
-Bạn hãy thử cập nhật bản code tự lập này xem trang **đã mở lên ngay lập tức chưa** và báo lại kết quả cho tôi biết nhé!
-</FollowUp>
